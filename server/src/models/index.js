@@ -1,13 +1,13 @@
-import { AudioFile } from "./AudioFile.js";
-import { Metadata } from "./Metadata.js";
-import { User } from "./User.js";
+import { audioFile } from "./audioFile.js";
+import { metadata } from "./metadata.js";
+import { user } from "./user.js";
 
 // Users One to Many with AudioFiles
-User.hasMany(AudioFile, { foreignKey: "user_id" });
-AudioFile.belongsTo(User, { foreignKey: "user_id" });
+user.hasMany(audioFile, { foreignKey: "user_id" });
+audioFile.belongsTo(user, { foreignKey: "user_id" });
 
 // AudioFile One to One with Metadata
-AudioFile.hasOne(Metadata, { foreignKey: "file_id" });
-Metadata.belongsTo(AudioFile, { foreignKey: "file_id" });
+audioFile.hasOne(metadata, { foreignKey: "file_id" });
+metadata.belongsTo(audioFile, { foreignKey: "file_id" });
 
-export { AudioFile, Metadata, User };
+export { audioFile, metadata, user };

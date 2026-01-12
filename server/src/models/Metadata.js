@@ -2,7 +2,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../db/sequelize.js";
 
-export const Metadata = sequelize.define(
+export const metadata = sequelize.define(
   "Metadata",
   {
     metadata_id: {

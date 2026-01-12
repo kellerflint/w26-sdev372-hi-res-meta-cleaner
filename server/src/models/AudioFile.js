@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../db/sequelize.js";
 
-export const AudioFile = sequelize.define(
+export const audioFile = sequelize.define(
   "AudioFile",
   {
     file_id: {
