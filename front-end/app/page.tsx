@@ -63,7 +63,7 @@ export default function HomePage() {
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
 
-    await fetch("http://localhost:3001/upload", {
+    await fetch("http://localhost:3001/api/upload", {
       method: "POST",
       body: formData,
     });
@@ -82,6 +82,7 @@ export default function HomePage() {
           onChange={handleFileChange}
           className="border p-2 rounded w-full"
         />
+        <button onClick={handleUpload} className="bg-blue-600 text-white px-4 py-2 rounded">Submit</button>
       </section>
 
       {/* Collection Table */}
