@@ -1,4 +1,5 @@
 import { audioFile } from "../models/audioFile.js";
+import { metadata } from "../models/metadata.js";
 import { user } from "../models/user.js";
 import { hashPassword } from "../utils/hashPassword.js";
 import { upsertMetadata } from "../repos/repos.js";
@@ -52,10 +53,27 @@ export async function uploadAudio(req, res, next) {
       })
     );
 
-    res.status(201).json(uploaded);
+    // Store uploaded files info for metadata extraction middleware
+    req.uploadedFiles = uploaded;
+    next();
   } catch (err) {
     next(err);
   }
+}
+
+// final handler to send upload response after metadata extraction
+export function sendUploadResponse(req, res) {
+  const response = req.uploadedFiles.map((file, index) => {
+    const metadataResult = req.extractedMetadata?.[index];
+    return {
+      file_id: file.file_id,
+      filename: file.filename,
+      original_filename: file.original_filename,
+      metadata: metadataResult?.metadata || null,
+    };
+  });
+
+  res.status(201).json(response);
 }
 
 // controller function to update db with audio file metadata
@@ -67,6 +85,45 @@ export const updateMetadata = async (req, res, next) => {
     next(err);
   }
 };
+
+// controller function to get metadata for all user's files
+export async function getMetadata(req, res, next) {
+  try {
+    const userId = req.user.user_id;
+
+    const userFiles = await audioFile.findAll({
+      where: { user_id: userId },
+      include: {
+        model: metadata,
+        required: false,
+      },
+    });
+
+    const response = userFiles.map((file) => ({
+      file_id: file.file_id,
+      original_filename: file.original_filename,
+      upload_date: file.upload_date,
+      metadata: file.metadatum
+        ? {
+            title: file.metadatum.title,
+            artist: file.metadatum.artist,
+            album: file.metadatum.album,
+            year: file.metadatum.year,
+            comment: file.metadatum.comment,
+            track: file.metadatum.track,
+            genre: file.metadatum.genre,
+            album_artist: file.metadatum.album_artist,
+            composer: file.metadatum.composer,
+            discnumber: file.metadatum.discnumber,
+          }
+        : null,
+    }));
+
+    res.status(200).json(response);
+  } catch (err) {
+    next(err);
+  }
+}
 
 // controller function to download all audio files for a user
 export async function downloadAudio(req, res, next) {
