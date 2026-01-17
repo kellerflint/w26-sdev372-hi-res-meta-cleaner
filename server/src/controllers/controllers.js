@@ -6,6 +6,7 @@ import { upsertMetadata } from "../repos/repos.js";
 import archiver from "archiver";
 import fs from "fs";
 import path from "path";
+import { writeMetadataToFile } from "../utils/writeMetadata.js";
 
 // controller function to create new user
 export async function createNewUser(req, res, next) {
@@ -130,49 +131,57 @@ export async function downloadAudio(req, res, next) {
   try {
     const userId = req.user.user_id;
 
-    // Get all audio files for the user
+    // Get files with metadata
     const userFiles = await audioFile.findAll({
       where: { user_id: userId },
+      include: { model: metadata, required: false },
     });
 
     if (!userFiles || userFiles.length === 0) {
       return res.status(404).json({ error: "No audio files found" });
     }
 
-    // Set response headers for ZIP download
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="audio-files-${userId}-${Date.now()}.zip"`
-    );
-
-    // Create archiver instance
-    const archive = archiver("zip", {
-      zlib: { level: 9 }, // Maximum compression
-    });
-
-    // Handle archiver errors
-    archive.on("error", (err) => {
-      next(err);
-    });
-
-    // Pipe archive to response
-    archive.pipe(res);
-
-    // Add each file to the archive
-    for (const file of userFiles) {
-      const filePath = path.join("uploads", file.filename);
-
-      // Check if file exists before adding
-      if (fs.existsSync(filePath)) {
-        // Use original filename in the ZIP archive
-        archive.file(filePath, { name: file.original_filename });
-      } else {
-        console.warn(`File not found: ${filePath}`);
-      }
+    // Create temp directory
+    const tempDir = "temp";
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    // Finalize the archive
+    // Process files - write metadata to temp copies
+    const tempFiles = [];
+    for (const file of userFiles) {
+      const inputPath = path.join("uploads", file.filename);
+      if (!fs.existsSync(inputPath)) continue;
+
+      const tempPath = path.join(tempDir, `${Date.now()}-${file.filename}`);
+
+      if (file.metadatum) {
+        await writeMetadataToFile(inputPath, tempPath, file.metadatum);
+      } else {
+        fs.copyFileSync(inputPath, tempPath);
+      }
+
+      tempFiles.push({ tempPath, originalName: file.original_filename });
+    }
+
+    // Set headers and create ZIP
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="audio-files.zip"`);
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.on("error", (err) => next(err));
+    archive.pipe(res);
+
+    // Add temp files to archive
+    for (const { tempPath, originalName } of tempFiles) {
+      archive.file(tempPath, { name: originalName });
+    }
+
+    // Clean up temp files after archive is done
+    archive.on("end", () => {
+      tempFiles.forEach(({ tempPath }) => fs.unlinkSync(tempPath));
+    });
+
     await archive.finalize();
   } catch (err) {
     next(err);

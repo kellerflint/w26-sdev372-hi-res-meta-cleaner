@@ -26,6 +26,17 @@ Thumbs.db
 
 *.local.json
 
+# Audio files
+*.mp3
+*.mp4
+*.m4a
+*.wav
+*.flac
+*.wma
+*.aac
+*.alac
+*.aiff
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
