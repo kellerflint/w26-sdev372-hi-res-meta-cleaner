@@ -68,3 +68,5 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.settings.local.json
