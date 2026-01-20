@@ -9,7 +9,7 @@ export async function upsertMetadata(payload) {
         throw new Error("file_id is required");
       }
 
-      return metadata.upsert({
+      const updateFields = {
         file_id: track.file_id,
         title: track.title,
         artist: track.artist,
@@ -23,7 +23,16 @@ export async function upsertMetadata(payload) {
         album_artist: track.album_artist,
         composer: track.composer,
         discnumber: track.discnumber,
+      };
+
+      Object.keys(updateFields).forEach((key) => {
+        const value = updateFields[key];
+        if (value === undefined || value === "") {
+          delete updateFields[key];
+        }
       });
+
+      return metadata.upsert(updateFields);
     })
   );
 }
