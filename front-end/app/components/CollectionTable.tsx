@@ -19,36 +19,49 @@ export default function CollectionTable({ collection, onRemove }: Props) {
   if (onRemove) headers.push('');
 
   // Handler for updating a field
-  const handleChange = async (index: number, field: keyof AudioFile, value: string) => {
+  const handleChange = async (
+    index: number,
+    field: keyof AudioFile,
+    value: string
+  ) => {
     const updatedFiles = [...files];
-    updatedFiles[index] = { ...updatedFiles[index], [field]: value };
+    const file = updatedFiles[index];
+
+    // Update local state immediately
+    updatedFiles[index] = { ...file, [field]: value };
     setFiles(updatedFiles);
 
-    // Send full metadata object
+    // If no ID, skip API call
+    if (!file.id) {
+      console.warn('Skipping API call: file ID is missing', file);
+      return;
+    }
+
+    // Build metadata payload
     const metadata = {
-      file_id: updatedFiles[index].id,
-      title: updatedFiles[index].title,
-      artist: updatedFiles[index].artist,
-      album: updatedFiles[index].album,
-      year: updatedFiles[index].year,
-      comment: updatedFiles[index].comment,
-      track: updatedFiles[index].track,
-      genre: updatedFiles[index].genre,
-      album_artist: updatedFiles[index].album_artist,
-      composer: updatedFiles[index].composer,
-      discnumber: updatedFiles[index].discnumber,
+      filefilenames: file.filename,
+      title: updatedFiles[index].title ?? '',
+      artist: updatedFiles[index].artist ?? '',
+      album: updatedFiles[index].album ?? '',
+      year: updatedFiles[index].year ?? '',
     };
 
     try {
-      await fetch('/api/update', {
+      const res = await fetch('/api/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(metadata),
       });
+      console.log(metadata);
+
+      if (!res.ok) {
+        console.error('Failed to update metadata:', await res.text());
+      }
     } catch (error) {
       console.error('Failed to update metadata:', error);
     }
   };
+
 
   return (
     <section>
