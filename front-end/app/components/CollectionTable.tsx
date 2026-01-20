@@ -1,41 +1,51 @@
 'use client';
 
 import { AudioFile } from '../types/audio';
+import './CollectionTable.css';
 
 type Props = {
   collection: AudioFile[];
+  onRemove?: (index: number) => void;
 };
 
-export default function CollectionTable({ collection }: Props) {
+export default function CollectionTable({ collection, onRemove }: Props) {
   if (collection.length === 0) return null;
+
+  const headers = ['File', 'Artist', 'Title', 'Album', 'Year', 'Type', 'Size'];
+  if (onRemove) headers.push('');
 
   return (
     <section>
-      <table className="min-w-full border border-gray-300">
-        <thead className="bg-gray-100">
+      <table className="collection-table">
+        <thead>
           <tr>
-            {['#', 'Artist', 'Title', 'Album', 'Album Artist', 'Year'].map(
-              (h) => (
-                <th key={h} className="border px-4 py-2">
-                  {h}
-                </th>
-              )
-            )}
+            {headers.map((h, i) => (
+              <th key={i}>{h}</th>
+            ))}
           </tr>
         </thead>
 
         <tbody>
           {collection.map((file, index) => (
-            <tr
-              key={file.id ?? `${file.artist}-${file.title}-${index}`}
-              className="text-center"
-            >
-              <td className="border px-4 py-2">{index + 1}</td>
-              <td className="border px-4 py-2">{file.artist ?? '-'}</td>
-              <td className="border px-4 py-2">{file.title ?? '-'}</td>
-              <td className="border px-4 py-2">{file.album ?? '-'}</td>
-              <td className="border px-4 py-2">{file.albumartist ?? '-'}</td>
-              <td className="border px-4 py-2">{file.year ?? '-'}</td>
+            <tr key={file.id ?? `${file.filename}-${index}`}>
+              <td>{file.filename ?? '-'}</td>
+              <td>{file.artist ?? '-'}</td>
+              <td>{file.title ?? '-'}</td>
+              <td>{file.album ?? '-'}</td>
+              <td>{file.year ?? '-'}</td>
+              <td>{file.type ?? '-'}</td>
+              <td>{file.size ?? '-'}</td>
+              {onRemove && (
+                <td>
+                  <button
+                    type="button"
+                    className="remove-button"
+                    onClick={() => onRemove(index)}
+                  >
+                    Remove
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
