@@ -35,3 +35,13 @@
 .remove-button:hover {
   background-color: #b91c1c;
 }
+
+.filename-input {
+  display: flex;
+  align-items: center;
+}
+
+.filename-ext {
+  color: #6b7280;
+  white-space: nowrap;
+}

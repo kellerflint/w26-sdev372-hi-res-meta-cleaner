@@ -81,7 +81,19 @@ export function sendUploadResponse(req, res) {
 // controller function to update db with audio file metadata
 export const updateMetadata = async (req, res, next) => {
   try {
-    await upsertMetadata(req.body);
+    const { file_id, filename, ...metadataFields } = req.body;
+
+    // Update original_filename in audio_files table if filename was changed
+    if (filename && file_id) {
+      await audioFile.update(
+        { original_filename: filename },
+        { where: { file_id } }
+      );
+    }
+
+    // Update metadata table
+    await upsertMetadata({ file_id, ...metadataFields });
+
     res.status(200).json({ message: "Metadata updated successfully" });
   } catch (err) {
     next(err);
