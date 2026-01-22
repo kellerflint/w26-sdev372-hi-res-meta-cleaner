@@ -1,15 +1,16 @@
 import { audioFile } from "../models/audioFile.js";
 import { metadata } from "../models/metadata.js";
 import { user } from "../models/user.js";
-import { Op } from "sequelize";
 import { hashPassword } from "../utils/hashPassword.js";
 import { upsertMetadata } from "../repos/repos.js";
-import archiver from "archiver";
-import fs from "fs";
-import path from "path";
-import { writeMetadataToFile } from "../utils/writeMetadata.js";
+import { mapAudioFileResponse, mapUploadedFileResponse } from "../utils/responseMappers.js";
+import { prepareFilesForDownload, streamFilesAsZip } from "../services/downloadService.js";
 
-// controller function to create new user
+/**
+ * Creates a new user account with a hashed password.
+ * @param {Request} req - Request with firstName, lastName, email, password in body
+ * @param {Response} res - Returns 201 with user details (excluding password)
+ */
 export async function createNewUser(req, res, next) {
   try {
     const { firstName, lastName, email, password } = req.body;
@@ -22,7 +23,7 @@ export async function createNewUser(req, res, next) {
       password_hash,
     });
 
-    return res.status(201).json({
+    res.status(201).json({
       user_id: newUser.user_id,
       email: newUser.email,
       first_name: newUser.first_name,
@@ -33,8 +34,14 @@ export async function createNewUser(req, res, next) {
   }
 }
 
-// controller function to upload audio files
-export async function uploadAudio(req, res, next) {
+/**
+ * Creates database records for uploaded audio files.
+ * Actual file upload is handled by multer middleware.
+ * Passes control to extractMetadata middleware after creating records.
+ * @param {Request} req - Request with files array from multer and user from auth
+ * @param {Response} res - Passes to next middleware
+ */
+export async function createAudioRecords(req, res, next) {
   try {
     const userId = req.user.user_id;
     const files = req.files;
@@ -55,7 +62,6 @@ export async function uploadAudio(req, res, next) {
       })
     );
 
-    // Store uploaded files info for metadata extraction middleware
     req.uploadedFiles = uploaded;
     next();
   } catch (err) {
@@ -63,27 +69,30 @@ export async function uploadAudio(req, res, next) {
   }
 }
 
-// final handler to send upload response after metadata extraction
+/**
+ * Sends the final response after file upload and metadata extraction.
+ * Combines uploaded file info with extracted metadata.
+ * @param {Request} req - Request with uploadedFiles and extractedMetadata from previous middleware
+ * @param {Response} res - Returns 201 with array of file info and metadata
+ */
 export function sendUploadResponse(req, res) {
-  const response = req.uploadedFiles.map((file, index) => {
-    const metadataResult = req.extractedMetadata?.[index];
-    return {
-      file_id: file.file_id,
-      filename: file.filename,
-      original_filename: file.original_filename,
-      metadata: metadataResult?.metadata || null,
-    };
-  });
+  const response = req.uploadedFiles.map((file, index) =>
+    mapUploadedFileResponse(file, req.extractedMetadata?.[index])
+  );
 
   res.status(201).json(response);
 }
 
-// controller function to update db with audio file metadata
-export const updateMetadata = async (req, res, next) => {
+/**
+ * Updates metadata for an audio file.
+ * Can update both the filename and metadata fields.
+ * @param {Request} req - Request with file_id, optional filename, and metadata fields in body
+ * @param {Response} res - Returns 200 on success
+ */
+export async function updateFileMetadata(req, res, next) {
   try {
     const { file_id, filename, ...metadataFields } = req.body;
 
-    // Update original_filename in audio_files table if filename was changed
     if (filename && file_id) {
       await audioFile.update(
         { original_filename: filename },
@@ -91,123 +100,52 @@ export const updateMetadata = async (req, res, next) => {
       );
     }
 
-    // Update metadata table
     await upsertMetadata({ file_id, ...metadataFields });
 
     res.status(200).json({ message: "Metadata updated successfully" });
   } catch (err) {
     next(err);
   }
-};
+}
 
-// controller function to get metadata for all user's files
+/**
+ * Retrieves all audio files and their metadata for the authenticated user.
+ * @param {Request} req - Request with user from auth middleware
+ * @param {Response} res - Returns 200 with array of files and metadata
+ */
 export async function getMetadata(req, res, next) {
   try {
     const userId = req.user.user_id;
 
     const userFiles = await audioFile.findAll({
       where: { user_id: userId },
-      include: {
-        model: metadata,
-        required: false,
-      },
+      include: { model: metadata, required: false },
     });
 
-    const response = userFiles.map((file) => ({
-      file_id: file.file_id,
-      original_filename: file.original_filename,
-      upload_date: file.upload_date,
-      metadata: file.metadatum
-        ? {
-            title: file.metadatum.title,
-            artist: file.metadatum.artist,
-            album: file.metadatum.album,
-            year: file.metadatum.year,
-            comment: file.metadatum.comment,
-            track: file.metadatum.track,
-            genre: file.metadatum.genre,
-            type: file.metadatum.type,
-            size: file.metadatum.size,
-            album_artist: file.metadatum.album_artist,
-            composer: file.metadatum.composer,
-            discnumber: file.metadatum.discnumber,
-          }
-        : null,
-    }));
-
-    res.status(200).json(response);
+    res.status(200).json(userFiles.map(mapAudioFileResponse));
   } catch (err) {
     next(err);
   }
 }
 
-// controller function to download all audio files for a user
-export async function downloadAudio(req, res, next) {
+/**
+ * Downloads requested audio files as a ZIP archive with embedded metadata.
+ * Validation of filenames array is handled by validateFilenamesArray middleware.
+ * @param {Request} req - Request with user from auth and filenames array in body
+ * @param {Response} res - Streams ZIP file response
+ */
+export async function downloadAudioAsZip(req, res, next) {
   try {
     const userId = req.user.user_id;
-    const { filenames } = req.body ?? {};
+    const { filenames } = req.body;
 
-    if (!Array.isArray(filenames) || filenames.length === 0) {
-      return res.status(400).json({
-        error: "filenames is required and must be a non-empty array",
-      });
-    }
+    const files = await prepareFilesForDownload(userId, filenames);
 
-    // Get files with metadata
-    const userFiles = await audioFile.findAll({
-      where: {
-        user_id: userId,
-        original_filename: { [Op.in]: filenames },
-      },
-      include: { model: metadata, required: false },
-    });
-
-    if (!userFiles || userFiles.length === 0) {
+    if (files.length === 0) {
       return res.status(404).json({ error: "No audio files found" });
     }
 
-    // Create temp directory
-    const tempDir = "temp";
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
-    // Process files - write metadata to temp copies
-    const tempFiles = [];
-    for (const file of userFiles) {
-      const inputPath = path.join("uploads", file.filename);
-      if (!fs.existsSync(inputPath)) continue;
-
-      const tempPath = path.join(tempDir, `${Date.now()}-${file.filename}`);
-
-      if (file.metadatum) {
-        await writeMetadataToFile(inputPath, tempPath, file.metadatum);
-      } else {
-        fs.copyFileSync(inputPath, tempPath);
-      }
-
-      tempFiles.push({ tempPath, originalName: file.original_filename });
-    }
-
-    // Set headers and create ZIP
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", `attachment; filename="audio-files.zip"`);
-
-    const archive = archiver("zip", { zlib: { level: 9 } });
-    archive.on("error", (err) => next(err));
-    archive.pipe(res);
-
-    // Add temp files to archive
-    for (const { tempPath, originalName } of tempFiles) {
-      archive.file(tempPath, { name: originalName });
-    }
-
-    // Clean up temp files after archive is done
-    archive.on("end", () => {
-      tempFiles.forEach(({ tempPath }) => fs.unlinkSync(tempPath));
-    });
-
-    await archive.finalize();
+    await streamFilesAsZip(files, res, next);
   } catch (err) {
     next(err);
   }
