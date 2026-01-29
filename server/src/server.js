@@ -1,3 +1,4 @@
+import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import sequelize, { connectDB } from "./db/sequelize.js";
@@ -11,7 +12,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: `http://${process.env.CORS_ORIGIN}:3000`,
     credentials: true,
   })
 );
@@ -39,6 +40,6 @@ if (process.env.NODE_ENV === "development") {
   await sequelize.sync();
 }
 
-app.listen(PORT, () => {
-  console.log(`Server started on http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server started on port ${PORT}`);
 });
