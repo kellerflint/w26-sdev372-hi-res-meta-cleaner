@@ -17,10 +17,12 @@ export default function HomePage() {
   const [selectedForDownload, setSelectedForDownload] = useState<Set<string>>(new Set());
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const LocalSYSVAR = process.env.NEXT_PUBLIC_LOCAL_SYSVAR || 'http://localhost:3001';
+
   const fetchCollection = async () => {
     setLoadingMeta(true);
     try {
-      const res = await fetch('http://localhost:3001/api/metadata', {
+      const res = await fetch(`${LocalSYSVAR}/api/metadata`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to load metadata');
@@ -61,7 +63,7 @@ export default function HomePage() {
       const formData = new FormData();
       files.forEach((file) => formData.append('files', file));
 
-      const res = await fetch('http://localhost:3001/api/upload', {
+      const res = await fetch(`${LocalSYSVAR}/api/upload`, {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -89,7 +91,7 @@ export default function HomePage() {
 
     setIsDownloading(true);
     try {
-      const res = await fetch('http://localhost:3001/api/download', {
+      const res = await fetch(`${LocalSYSVAR}/api/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filenames: Array.from(selectedForDownload) }),
