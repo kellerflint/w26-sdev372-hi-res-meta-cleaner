@@ -12,7 +12,7 @@ interface EnableDownload {
   showDownload?: boolean;
   selectedFiles?: Set<string>;
   onSelectionChange?: (filenames: Set<string>) => void;
-  // readOnly?: boolean;
+  readOnly?: boolean;
 };
 
 export default function CollectionTable({
@@ -21,7 +21,7 @@ export default function CollectionTable({
   showDownload = false,
   selectedFiles = new Set(),
   onSelectionChange,
-  // readOnly = false,
+  readOnly = false,
 }: EnableDownload) {
   const [files, setFiles] = useState<AudioFile[]>(collection);
 
