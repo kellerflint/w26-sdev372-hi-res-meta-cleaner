@@ -42,5 +42,5 @@ if (process.env.NODE_ENV === "development") {
 }
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server started on port ${PORT}`);
+  console.log(`Server started on port ${process.env.CORS_ORIGIN+":"+PORT}`);
 });
