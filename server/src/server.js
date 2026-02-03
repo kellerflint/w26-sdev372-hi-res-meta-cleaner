@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import cookieParser from "cookie-parser";
 import sequelize, { connectDB } from "./db/sequelize.js";
 import "./models/index.js";
 import apiRouter from "./routes/routes.js";
@@ -16,6 +17,9 @@ app.use(
     credentials: true,
   })
 );
+
+// Parse cookies for JWT authentication
+app.use(cookieParser());
 
 // Parse incoming JSON request bodies
 app.use(express.json());
