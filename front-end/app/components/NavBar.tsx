@@ -1,16 +1,14 @@
-import { useState } from "react"
-
-export default function NavBar({ uploading, submited }) {
+export default function NavBar({ setIsUploading, setHasSubmitted }) {
     
     return (
         <nav className="navbar">
             <button onClick={() => {
-                uploading(false)
-                submited(false)
+                setIsUploading(false)
+                setHasSubmitted(false)
                 }}>Upload</button>
             <button onClick={() => {
-                uploading(false)
-                submited(true)
+                setIsUploading(false)
+                setHasSubmitted(true)
                 }}>Collection</button>
         </nav>
     )

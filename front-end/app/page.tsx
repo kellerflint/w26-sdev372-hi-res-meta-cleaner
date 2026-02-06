@@ -132,8 +132,8 @@ export default function HomePage() {
   return (
     <div className="page-content">
       <NavBar
-        uploading={setIsUploading}
-        submited={setHasSubmitted}
+        setIsUploading={setIsUploading}
+        setHasSubmitted={setHasSubmitted}
       />
       {isUploading ? (
         <Loading message="Uploading files" />
