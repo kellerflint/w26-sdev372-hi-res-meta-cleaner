@@ -55,14 +55,14 @@ async function processFileForDownload(file) {
  * Fetches user's audio files from database and prepares them for download
  * by creating temp copies with embedded metadata.
  * @param {number} userId - The user's ID
- * @param {string[]} filenames - Array of original filenames to download
+ * @param {number[]} fileIds - Array of file IDs to download
  * @returns {Promise<Array<{tempPath: string, originalName: string}>>} Prepared files
  */
-export async function prepareFilesForDownload(userId, filenames) {
+export async function prepareFilesForDownload(userId, fileIds) {
   const userFiles = await audioFile.findAll({
     where: {
       user_id: userId,
-      original_filename: { [Op.in]: filenames },
+      file_id: { [Op.in]: fileIds },
     },
     include: { model: metadata, required: false },
   });

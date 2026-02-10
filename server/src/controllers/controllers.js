@@ -156,9 +156,9 @@ export async function getMetadata(req, res, next) {
 export async function downloadAudioAsZip(req, res, next) {
   try {
     const userId = req.user.user_id;
-    const { filenames } = req.body;
+    const { fileIds } = req.body;
 
-    const files = await prepareFilesForDownload(userId, filenames);
+    const files = await prepareFilesForDownload(userId, fileIds);
 
     if (files.length === 0) {
       return res.status(404).json({ error: "No audio files found" });

@@ -127,14 +127,12 @@ export default function HomePage() {
 
     setIsDownloading(true);
     try {
-      const selectedFilenames = uploadedCollection
-        .filter(file => selectedForDownload.has(file.id))
-        .map(file => file.filename);
+      const selectedFileIds = Array.from(selectedForDownload);
 
       const response = await fetch(`${apiBaseUrl}/api/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filenames: selectedFilenames }),
+        body: JSON.stringify({ fileIds: selectedFileIds }),
         credentials: 'include',
       });
 
