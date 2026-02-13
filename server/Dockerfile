@@ -1,21 +1,22 @@
-# syntax=docker/dockerfile:1
+# Dockerfile for the Express API server.
+# Runtime env vars (DB credentials, JWT secrets, etc.) are passed from
+# docker-compose.yml, which reads them from the root .env file.
 
+# Debian-based image — required for bcrypt native compilation
 FROM node:20-bullseye-slim
 WORKDIR /app
-ENV NODE_ENV=development
-ENV PORT=3001
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ffmpeg \
-  && rm -rf /var/lib/apt/lists/*
-
+# Run as non-root for security
 RUN addgroup --system app && adduser --system --ingroup app app
 
+# Install production dependencies only
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
+# Copy the application source
 COPY src ./src
 
+# Create the uploads directory for user file processing
 RUN mkdir -p /app/uploads \
   && chown -R app:app /app
 USER app
