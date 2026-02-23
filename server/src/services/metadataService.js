@@ -83,9 +83,7 @@ export async function extractAndStoreMetadata(file) {
   const fileInfo = getFileInfo(filePath, file.filename);
 
   try {
-    console.log(`Extracting metadata from: ${filePath}`);
     const parsed = await musicMetadata.parseFile(filePath);
-    console.log(`Extracted metadata:`, JSON.stringify(parsed.common, null, 2));
 
     const metadataRecord = buildMetadataRecord(file.file_id, parsed.common, fileInfo);
     await upsertMetadata(metadataRecord);

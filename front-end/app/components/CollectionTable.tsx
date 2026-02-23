@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AudioFile } from "../types/audio";
 import { FileRow } from "./FileRow";
 import { handleFileChange } from "./fileUtils";
@@ -13,6 +13,7 @@ interface CollectionTableProps {
   selectedFiles?: Set<number>;
   onSelectionChange?: (fileIds: Set<number>) => void;
   readOnly?: boolean;
+  duplicateFilenames?: Set<string>;
 }
 
 export default function CollectionTable({
@@ -22,8 +23,13 @@ export default function CollectionTable({
   selectedFiles = new Set(),
   onSelectionChange,
   readOnly = false,
+  duplicateFilenames,
 }: CollectionTableProps) {
   const [files, setFiles] = useState<AudioFile[]>(collection);
+
+  useEffect(() => {
+    setFiles(collection);
+  }, [collection]);
 
   if (files.length === 0) return null;
 
@@ -71,6 +77,7 @@ export default function CollectionTable({
   const handleRemoveFile = (index: number) => {
     const updatedFiles = files.filter((_, itemIndex) => itemIndex !== index);
     setFiles(updatedFiles);
+    onRemove?.(index);
   };
 
   const handleChange = async (
@@ -116,7 +123,7 @@ export default function CollectionTable({
       <tbody>
         {files.map((file, index) => (
           <FileRow
-            key={file.id ?? `${file.filename}-${index}`}
+            key={file.id || `${file.filename}-${index}`}
             file={file}
             index={index}
             selectedFiles={selectedFiles}
@@ -127,6 +134,7 @@ export default function CollectionTable({
             onRemove={onRemove ? handleRemoveFile : undefined}
             readOnly={readOnly}
             showSelectionCheckbox={showSelectionCheckbox}
+            isDuplicate={duplicateFilenames?.has(file.filename)}
           />
         ))}
       </tbody>

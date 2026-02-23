@@ -12,6 +12,7 @@ interface FileRowProps {
   onRemove?: (index: number) => void;
   readOnly?: boolean;
   showSelectionCheckbox?: boolean;
+  isDuplicate?: boolean;
 }
 
 export function FileRow({
@@ -25,6 +26,7 @@ export function FileRow({
   onRemove,
   readOnly = false,
   showSelectionCheckbox = false,
+  isDuplicate = false,
 }: FileRowProps) {
   const splitFilenameAndExtension = (filename: string) => {
     const lastDotIndex = filename.lastIndexOf(".");
@@ -38,7 +40,7 @@ export function FileRow({
   const { fileNameWithoutExt, fileExtension } = splitFilenameAndExtension(file.filename);
 
   return (
-    <tr>
+    <tr className={isDuplicate ? styles.duplicateRow : undefined}>
       {showSelectionCheckbox && (
         <td>
           <label>

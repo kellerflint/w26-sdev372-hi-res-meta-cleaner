@@ -103,6 +103,15 @@
   margin-right: 0.5rem;
 }
 
+/* Duplicate file highlight */
+.duplicateRow {
+  background-color: rgba(248, 113, 113, 0.15) !important;
+}
+
+.duplicateRow:hover {
+  background-color: rgba(248, 113, 113, 0.25) !important;
+}
+
 /* Input widths */
 .inputFull {
   width: 100%;
