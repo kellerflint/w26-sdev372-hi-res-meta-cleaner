@@ -317,7 +317,8 @@ body::before {
   box-shadow: 0 0 0 0.125rem rgba(125, 211, 252, 0.18);
 }
 
-.auth-page .error {
+.auth-page .error,
+.error-message {
   color: #f87171;
   background: rgba(248, 113, 113, 0.1);
   border: 0.0625rem solid rgba(248, 113, 113, 0.4);
