@@ -1,0 +1,122 @@
+/* Table shell */
+.collectionTable {
+  width: 100%;
+  border-collapse: collapse;
+  border: 0.0625rem solid #020617;
+  box-shadow: 0 0 0 0.0625rem #020617;
+  font-size: 0.8125rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+/* Compact variant (read-only preview) */
+.compact {
+  font-size: 0.75rem;
+}
+
+.compact th {
+  padding: 0.2rem 0.4rem;
+}
+
+.compact td {
+  padding: 0.2rem 0.4rem;
+}
+
+/* Header cells */
+.collectionTable th {
+  background-color: #9aa1ac;
+  border: 0.0625rem solid #020617;
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  font-weight: 700;
+  color: #0b3b6f;
+}
+
+/* Body cells */
+.collectionTable td {
+  border: 0.0625rem solid #020617;
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+
+.collectionTable tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Footer row */
+.tableFooterRow {
+  background-color: #9aa1ac;
+  color: #0b3b6f;
+  font-weight: 600;
+}
+
+.tableFooterRow td {
+  border: 0.0625rem solid #020617;
+  padding: 0.35rem 0.5rem;
+}
+
+/* Remove action */
+.removeButton {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.removeButton:hover {
+  background-color: #b91c1c;
+}
+
+/* Filename composed input */
+.filenameInput {
+  display: flex;
+  align-items: center;
+}
+
+.filenameExt {
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* Read-only inputs */
+.collectionTable input[readonly] {
+  background-color: #f3f4f6;
+  border: 0.0625rem solid #e5e7eb;
+  cursor: default;
+  color: #4b5563;
+}
+
+/* Column widths */
+.yearHeader {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.selectAllHeader {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.selectAllCheckbox {
+  margin-right: 0.5rem;
+}
+
+/* Duplicate file highlight */
+.duplicateRow {
+  background-color: rgba(248, 113, 113, 0.15) !important;
+}
+
+.duplicateRow:hover {
+  background-color: rgba(248, 113, 113, 0.25) !important;
+}
+
+/* Input widths */
+.inputFull {
+  width: 100%;
+}
+
+.inputYear {
+  width: 6ch;
+}

@@ -26,12 +26,12 @@ export const validateMetadata = (req, res, next) => {
  * Validates that request body contains a non-empty filenames array.
  * Used for download requests that require a list of files to process.
  */
-export const validateFilenamesArray = (req, res, next) => {
-  const { filenames } = req.body ?? {};
+export const validateFileIdsArray = (req, res, next) => {
+  const { fileIds } = req.body ?? {};
 
-  if (!Array.isArray(filenames) || filenames.length === 0) {
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
     return res.status(400).json({
-      error: "filenames is required and must be a non-empty array",
+      error: "fileIds is required and must be a non-empty array",
     });
   }
 

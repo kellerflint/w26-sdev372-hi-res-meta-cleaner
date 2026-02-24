@@ -1,5 +1,7 @@
+import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import cookieParser from "cookie-parser";
 import sequelize, { connectDB } from "./db/sequelize.js";
 import "./models/index.js";
 import apiRouter from "./routes/routes.js";
@@ -11,10 +13,13 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: `http://${process.env.CORS_ORIGIN}:3000`,
     credentials: true,
   })
 );
+
+// Parse cookies for JWT authentication
+app.use(cookieParser());
 
 // Parse incoming JSON request bodies
 app.use(express.json());
@@ -39,6 +44,6 @@ if (process.env.NODE_ENV === "development") {
   await sequelize.sync();
 }
 
-app.listen(PORT, () => {
-  console.log(`Server started on http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server started on port ${process.env.CORS_ORIGIN + ":" + PORT}`);
 });

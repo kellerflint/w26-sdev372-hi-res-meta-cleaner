@@ -1,10 +1,16 @@
-import { audioFile } from "../models/audioFile.js";
-import { metadata } from "../models/metadata.js";
-import { user } from "../models/user.js";
+import { audioFile } from "../models/AudioFile.js";
+import { metadata } from "../models/Metadata.js";
+import { user } from "../models/User.js";
 import { hashPassword } from "../utils/hashPassword.js";
 import { upsertMetadata } from "../repos/repos.js";
 import { mapAudioFileResponse, mapUploadedFileResponse } from "../utils/responseMappers.js";
 import { prepareFilesForDownload, streamFilesAsZip } from "../services/downloadService.js";
+import {
+  generateAccessToken,
+  verifyRefreshToken,
+  accessTokenCookieOptions,
+  refreshTokenCookieOptions,
+} from "../utils/jwt.js";
 
 /**
  * Creates a new user account with a hashed password.
@@ -151,9 +157,9 @@ export async function getMetadata(req, res, next) {
 export async function downloadAudioAsZip(req, res, next) {
   try {
     const userId = req.user.user_id;
-    const { filenames } = req.body;
+    const { fileIds } = req.body;
 
-    const files = await prepareFilesForDownload(userId, filenames);
+    const files = await prepareFilesForDownload(userId, fileIds);
 
     if (files.length === 0) {
       return res.status(404).json({ error: "No audio files found" });
@@ -163,4 +169,44 @@ export async function downloadAudioAsZip(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+/**
+ * Refreshes the access token using the refresh token from cookies.
+ * Issues a new access token if the refresh token is valid.
+ * @param {Request} req - Request with refreshToken cookie
+ * @param {Response} res - Returns 200 with new access token cookie, or 401 on failure
+ */
+export function refreshToken(req, res) {
+  try {
+    const refreshTokenValue = req.cookies?.refreshToken;
+
+    if (!refreshTokenValue) {
+      return res.status(401).json({ error: "Refresh token required" });
+    }
+
+    const decoded = verifyRefreshToken(refreshTokenValue);
+    const newAccessToken = generateAccessToken(decoded.user_id);
+
+    res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
+    res.status(200).json({ message: "Token refreshed successfully" });
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Refresh token expired, please login again" });
+    }
+    return res.status(401).json({ error: "Invalid refresh token" });
+  }
+}
+
+/**
+ * Logs out the user by clearing authentication cookies.
+ * @param {Request} req - Request object
+ * @param {Response} res - Returns 200 on successful logout
+ */
+export function logoutUser(req, res) {
+  const { maxAge: _a, ...clearAccessOptions } = accessTokenCookieOptions;
+  const { maxAge: _r, ...clearRefreshOptions } = refreshTokenCookieOptions;
+  res.clearCookie("accessToken", clearAccessOptions);
+  res.clearCookie("refreshToken", clearRefreshOptions);
+  res.status(200).json({ message: "Logged out successfully" });
 }

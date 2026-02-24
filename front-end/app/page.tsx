@@ -1,184 +1,82 @@
 'use client';
 
-import { useState } from 'react';
-import UploadSection from '../app/components/UploadSection';
-import CollectionTable from '../app/components/CollectionTable';
-import Loading from '../app/components/Loading';
-import { extractMetadata } from './components/useAudioMetadata';
-import { AudioFile } from '../app/types/audio';
+import { useEffect } from 'react';
+import { useAuth } from './components/AuthProvider';
 import NavBar from './components/NavBar';
+import Loading from './components/Loading';
+import LoginPrompt from './components/LoginPrompt';
+import UploadView from './components/UploadView';
+import CollectionView from './components/CollectionView';
+import { useUpload } from './hooks/useUpload';
+import { useCollection } from './hooks/useCollection';
+import { useMounted } from './hooks/useMounted';
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_LOCAL_SYSVAR || 'http://localhost:3001';
 
 export default function HomePage() {
-  const [files, setFiles] = useState<File[]>([]);
-  const [collection, setCollection] = useState<AudioFile[]>([]);
-  const [metaCollect, setMetaCollect] = useState<AudioFile[]>([]);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [loadingMeta, setLoadingMeta] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedForDownload, setSelectedForDownload] = useState<Set<string>>(new Set());
-  const [isDownloading, setIsDownloading] = useState(false);
+  const { user } = useAuth();
+  const mounted = useMounted();
 
+  const { fetchCollection, ...collection } = useCollection(apiBaseUrl);
+  const upload = useUpload(apiBaseUrl);
 
-  const fetchCollection = async () => {
-    setLoadingMeta(true);
-    try {
-      const res = await fetch('http://localhost:3001/api/metadata', {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to load metadata');
+  useEffect(() => {
+    if (upload.hasSubmitted) fetchCollection();
+  }, [upload.hasSubmitted, fetchCollection]);
 
-      const rawData = await res.json();
+  if (!mounted) return <div className="page-content" />;
 
-      const normalized: AudioFile[] = rawData.map((row: any) => ({
-        id: row.file_id,
-        filename: row.original_filename ?? 'Unknown',
-        title: row.metadata?.title ?? 'Unknown',
-        artist: row.metadata?.artist ?? 'Unknown',
-        album: row.metadata?.album ?? 'Unknown',
-        year: row.metadata?.year?.toString() ?? 'Unknown',
-        type: row.metadata?.type ?? row.original_filename?.split('.').pop()?.toUpperCase() ?? 'Unknown',
-        size: row.metadata?.size ?? '-',
-      }));
-
-      setMetaCollect(normalized);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingMeta(false);
-    }
+  const navBarProps = {
+    setIsUploading: upload.setIsUploading,
+    setHasSubmitted: (value: boolean) => {
+      if (!value) upload.resetFiles();
+      upload.setHasSubmitted(value);
+    },
+    hasSubmitted: upload.hasSubmitted,
   };
 
-  const handleFilesSelected = async (selectedFiles: File[]) => {
-
-    setFiles(selectedFiles);
-
-    const metadata = await extractMetadata(selectedFiles);
-
-    setCollection(metadata);
-
-  };
-
-  const handleUpload = async () => {
-    if (!files.length) return;
-
-    setIsUploading(true);
-
-    try {
-      const formData = new FormData();
-      files.forEach((file) => formData.append('files', file));
-
-      const res = await fetch('http://localhost:3001/api/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        if (res.status === 409) {
-          alert('This file has already been uploaded.');
-          return;
-        }
-
-        throw new Error('Upload failed');
-      }
-
-
-      setHasSubmitted(true);
-      await fetchCollection();
-    } catch (err) {
-      console.error(err);
-      alert('Upload failed. Make sure the server is running on port 3001.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleRemoveFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setCollection((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleDownload = async () => {
-    if (selectedForDownload.size === 0) return;
-
-    setIsDownloading(true);
-    try {
-      const res = await fetch('http://localhost:3001/api/download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filenames: Array.from(selectedForDownload) }),
-        credentials: 'include',
-      });
-
-      if (!res.ok) throw new Error('Download failed');
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'audio-files.zip';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error(err);
-      alert('Download failed. Please try again.');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+  if (!user) {
+    return (
+      <>
+        <NavBar {...navBarProps} />
+        <header className="page-header">
+          <h1>Hi-Res Meta Cleaner</h1>
+        </header>
+        <LoginPrompt />
+      </>
+    );
+  }
 
   return (
-    <div className="page-content">
-      <NavBar
-        setIsUploading={setIsUploading}
-        setHasSubmitted={setHasSubmitted}
-      />
-      {isUploading ? (
-        <Loading message="Uploading files" />
-      ) : !hasSubmitted ? (
-        <>
-          <UploadSection onFilesSelected={handleFilesSelected} />
-          {collection.length > 0 && (
-            <div className="selected-files-section">
-              <h2 className="section-heading">Selected Files</h2>
-              <CollectionTable collection={collection} onRemove={handleRemoveFile} readOnly />
-              <button
-                type="button"
-                className="submit-button"
-                onClick={handleUpload}
-              >
-                Submit
-              </button>
-            </div>
-          )}
-        </>
-      ) : (
-        <div>
-          <h2 className="section-heading">Your Audio Collection</h2>
-          {loadingMeta ? (
-            <Loading message="Loading collection" />
-          ) : (
-            <>
-              <CollectionTable
-                collection={metaCollect}
-                showDownload
-                selectedFiles={selectedForDownload}
-                onSelectionChange={setSelectedForDownload}
-              />
-              <button
-                type="button"
-                className="submit-button"
-                onClick={handleDownload}
-                disabled={selectedForDownload.size === 0 || isDownloading}
-              >
-                {isDownloading ? 'Downloading...' : `Download Selected (${selectedForDownload.size})`}
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
+    <>
+      <NavBar {...navBarProps} showActive showNavActions />
+      <header className="page-header">
+        <h1>Hi-Res Meta Cleaner</h1>
+      </header>
+      <div className="page-content">
+        {upload.isUploading ? (
+          <Loading message="Uploading files" />
+        ) : !upload.hasSubmitted ? (
+          <UploadView
+            localCollection={upload.localCollection}
+            onFilesSelected={upload.handleFilesSelected}
+            onRemove={upload.handleRemoveFile}
+            onSubmit={upload.handleUpload}
+            uploadError={upload.uploadError}
+            duplicateFilenames={upload.duplicateFilenames}
+            resetKey={upload.resetKey}
+          />
+        ) : (
+          <CollectionView
+            collection={collection.uploadedCollection}
+            isLoadingCollection={collection.isLoadingCollection}
+            selectedForDownload={collection.selectedForDownload}
+            onSelectionChange={collection.setSelectedForDownload}
+            onDownload={collection.handleDownload}
+            isDownloading={collection.isDownloading}
+          />
+        )}
+      </div>
+    </>
   );
 }
