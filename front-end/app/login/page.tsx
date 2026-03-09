@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const setIsUploading = () => {};
+  const setIsUploading = () => { };
   const router = useRouter();
   const { login } = useAuth();
   const LocalSYSVAR =
@@ -77,6 +77,7 @@ export default function LoginPage() {
             Email:
             <input
               value={email}
+              data-testid="email-input"
               onChange={(event) => setEmail(event.target.value)}
               type="email"
               required
@@ -86,6 +87,7 @@ export default function LoginPage() {
             Password:
             <input
               value={password}
+              data-testid="password-input"
               onChange={(event) => setPassword(event.target.value)}
               type="password"
               required
