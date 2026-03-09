@@ -12,7 +12,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(true);
-  const setIsUploading = () => {};
+  const setIsUploading = () => { };
   const router = useRouter();
   const LocalSYSVAR =
     process.env.NEXT_PUBLIC_LOCAL_SYSVAR || "http://localhost:3001";
@@ -68,6 +68,7 @@ export default function RegisterPage() {
             First Name:
             <input
               value={firstName}
+              data-testid="firstname-input"
               onChange={(event) => setFirstName(event.target.value)}
               required
             />
@@ -76,6 +77,7 @@ export default function RegisterPage() {
             Last Name:
             <input
               value={lastName}
+              data-testid="lastname-input"
               onChange={(event) => setLastName(event.target.value)}
               required
             />
@@ -84,6 +86,7 @@ export default function RegisterPage() {
             Email:
             <input
               value={email}
+              data-testid="email-input"
               onChange={(event) => setEmail(event.target.value)}
               type="email"
               required
@@ -93,6 +96,7 @@ export default function RegisterPage() {
             Password:
             <input
               value={password}
+              data-testid="password-input1"
               onChange={(event) => setPassword(event.target.value)}
               type="password"
               required
@@ -102,6 +106,7 @@ export default function RegisterPage() {
             Confirm Password:
             <input
               value={confirmPassword}
+              data-testid="password-input2"
               onChange={(event) => setConfirmPassword(event.target.value)}
               type="password"
               required

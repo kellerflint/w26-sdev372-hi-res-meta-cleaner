@@ -33,10 +33,10 @@ export default function HeaderAuth({ activeAuth }: HeaderAuthProps) {
         </>
       ) : (
         <>
-          <Link href="/login">
+          <Link href="/login" data-testid="login-link">
             <button type="button" className={`login-button ${activeAuth === "login" ? "active" : ""}`}>Login</button>
           </Link>
-          <Link href="/register">
+          <Link href="/register" data-testid="register-link">
             <button type="button" className={`register-button ${activeAuth === "register" ? "active" : ""}`}>Register</button>
           </Link>
         </>

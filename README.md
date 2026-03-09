@@ -97,3 +97,11 @@ characters or normalize formatting
 | [ ] | Track Two | Artist A | Album X | 2020 |☐
 | [ ] | Track Three | Artist B | Album Y | 2019 |☐
 +-----------
+
+### Running Cypress Tests
+# 1. cd into front-end
+# 2. In a sperate console, cd and start backend 
+# 3. In another console, run either `npx cypress open`/`npm run cy:open`, `npx cypress run`/`npm run cy:run`, or `npm run test:e2e`
+`npx cypress open`/`npm run cy:open`: Opens interactive GUI
+`npx cypress run`/`npm run cy:run`: Runs headlessly (CI mode) with console output 
+`npm run test:e2e`: Starts Next.js + runs tests (back-end must already be running) with console output
