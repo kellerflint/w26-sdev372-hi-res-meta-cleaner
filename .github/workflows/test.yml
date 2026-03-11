@@ -1,0 +1,46 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target test -t server-test ./server
+      - run: docker run --rm server-test
+
+  frontend-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target test -t client-test ./front-end
+      - run: docker run --rm client-test
+
+  # integration: (uncomment when integration tests are ready)
+  #   needs: [backend-unit, frontend-unit]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: docker compose run --rm server npm run test:integration
+
+  # e2e: (uncomment when integration tests are ready)
+  #   needs: [integration]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: docker compose up -d --build
+  #     - run: |
+  #         echo "Waiting for app to be ready..."
+  #         for i in $(seq 1 30); do
+  #           curl -s http://localhost:3000 > /dev/null && break
+  #           sleep 2
+  #         done
+  #     - run: docker build -t e2e-test ./e2e
+  #     - run: docker run --rm --network ci-cd-demo_default -e BASE_URL=http://client:80 e2e-test
+  #     - run: docker compose down
+  #       if: always()
