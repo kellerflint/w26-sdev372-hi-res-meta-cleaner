@@ -25,7 +25,9 @@
   "contributors": [],
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node ./src/server.js"
+    "start": "node ./src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "archiver": "^7.0.1",
@@ -43,6 +45,7 @@
     "sequelize": "^6.37.7"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "vitest": "^4.0.18"
   }
 }
