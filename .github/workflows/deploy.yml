@@ -37,7 +37,6 @@ jobs:
           ping -c 4 100.103.112.53 || {
             echo "❌ Cannot reach server over Tailscale"
             exit 1
-        }
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
