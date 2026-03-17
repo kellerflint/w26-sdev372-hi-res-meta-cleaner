@@ -65,6 +65,7 @@ export default function CollectionView({
             selectedFiles={selectedForDownload}
             onSelectionChange={onSelectionChange}
             filterTerm={searchTerm}
+            enableSorting
           />
           <button
             type="button"

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockValues = vi.hoisted(() => ({
@@ -111,7 +111,9 @@ describe("main workflows", () => {
     fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 
     // Assert
-    expect(await screen.findByText("Audio Collection Editor")).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { name: "Audio Collection Editor" })
+    ).toBeVisible();
     expect(fetch).toHaveBeenNthCalledWith(
       1,
       "http://localhost:3001/api/upload",
@@ -279,5 +281,88 @@ describe("main workflows", () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue("Updated Title")).toBeInTheDocument();
     });
+  });
+
+  it("sorts the collection table by title", () => {
+    const { container } = render(
+      <CollectionView
+        collection={[
+          {
+            id: 1,
+            filename: "zulu-track.mp3",
+            title: "Zulu Song",
+            artist: "Artist Z",
+            album: "Album Z",
+            year: "2024",
+            type: "MP3",
+            size: "5 MB",
+          },
+          {
+            id: 2,
+            filename: "alpha-track.mp3",
+            title: "Alpha Song",
+            artist: "Artist A",
+            album: "Album A",
+            year: "2023",
+            type: "MP3",
+            size: "6 MB",
+          },
+        ]}
+        isLoadingCollection={false}
+        selectedForDownload={new Set()}
+        onSelectionChange={() => {}}
+        onDownload={() => {}}
+        isDownloading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Title" }));
+
+    let rows = container.querySelectorAll("tbody tr");
+    expect(within(rows[0] as HTMLElement).getByDisplayValue("Alpha Song")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Title/ }));
+
+    rows = container.querySelectorAll("tbody tr");
+    expect(within(rows[0] as HTMLElement).getByDisplayValue("Zulu Song")).toBeInTheDocument();
+  });
+
+  it("sorts the collection table by year as numbers", () => {
+    const { container } = render(
+      <CollectionView
+        collection={[
+          {
+            id: 1,
+            filename: "later-track.mp3",
+            title: "Later Song",
+            artist: "Artist B",
+            album: "Album B",
+            year: "2024",
+            type: "MP3",
+            size: "5 MB",
+          },
+          {
+            id: 2,
+            filename: "earlier-track.mp3",
+            title: "Earlier Song",
+            artist: "Artist A",
+            album: "Album A",
+            year: "1999",
+            type: "MP3",
+            size: "6 MB",
+          },
+        ]}
+        isLoadingCollection={false}
+        selectedForDownload={new Set()}
+        onSelectionChange={() => {}}
+        onDownload={() => {}}
+        isDownloading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Year" }));
+
+    const rows = container.querySelectorAll("tbody tr");
+    expect(within(rows[0] as HTMLElement).getByDisplayValue("1999")).toBeInTheDocument();
   });
 });

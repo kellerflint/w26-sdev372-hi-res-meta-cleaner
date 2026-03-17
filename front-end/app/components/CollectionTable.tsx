@@ -15,7 +15,72 @@ interface CollectionTableProps {
   readOnly?: boolean;
   duplicateFilenames?: Set<string>;
   filterTerm?: string;
+  enableSorting?: boolean;
 }
+
+type SortField = "filename" | "artist" | "title" | "album" | "year" | "type" | "size";
+type SortDirection = "asc" | "desc";
+
+const sortableColumns: Array<{
+  label: string;
+  field: SortField;
+  headerClassName?: string;
+}> = [
+  { label: "File", field: "filename" },
+  { label: "Artist", field: "artist" },
+  { label: "Title", field: "title" },
+  { label: "Album", field: "album" },
+  { label: "Year", field: "year", headerClassName: styles.yearHeader },
+  { label: "Type", field: "type" },
+  { label: "Size", field: "size" },
+];
+
+const compareText = (left: string, right: string) =>
+  left.localeCompare(right, undefined, {
+    sensitivity: "base",
+    numeric: true,
+  });
+
+const parseYearValue = (year: string) => {
+  const parsedYear = Number.parseInt(year, 10);
+  return Number.isNaN(parsedYear) ? null : parsedYear;
+};
+
+const parseSizeToBytes = (size: string) => {
+  const [valueText, unitText = "B"] = size.trim().split(/\s+/);
+  const value = Number.parseFloat(valueText);
+
+  if (Number.isNaN(value)) return 0;
+
+  const unitMultipliers: Record<string, number> = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024,
+  };
+
+  const normalizedUnit = unitText.toUpperCase();
+  return value * (unitMultipliers[normalizedUnit] ?? 1);
+};
+
+const compareFiles = (left: AudioFile, right: AudioFile, field: SortField) => {
+  if (field === "year") {
+    const leftYear = parseYearValue(left.year);
+    const rightYear = parseYearValue(right.year);
+
+    if (leftYear !== null && rightYear !== null) {
+      return leftYear - rightYear;
+    }
+
+    return compareText(left.year, right.year);
+  }
+
+  if (field === "size") {
+    return parseSizeToBytes(left.size) - parseSizeToBytes(right.size);
+  }
+
+  return compareText(left[field], right[field]);
+};
 
 export default function CollectionTable({
   collection,
@@ -26,8 +91,13 @@ export default function CollectionTable({
   readOnly = false,
   duplicateFilenames,
   filterTerm = "",
+  enableSorting = false,
 }: CollectionTableProps) {
   const [files, setFiles] = useState<AudioFile[]>(collection);
+  const [sortConfig, setSortConfig] = useState<{
+    field: SortField;
+    direction: SortDirection;
+  } | null>(null);
 
   useEffect(() => {
     setFiles(collection);
@@ -37,7 +107,7 @@ export default function CollectionTable({
 
   const normalizedFilter = filterTerm.trim().toLowerCase();
 
-  const visibleRows = files
+  const filteredRows = files
     .map((file, index) => ({ file, index }))
     .filter(({ file }) => {
       if (!normalizedFilter) return true;
@@ -56,10 +126,25 @@ export default function CollectionTable({
       );
     });
 
+  const visibleRows = sortConfig
+    ? [...filteredRows].sort((leftRow, rightRow) => {
+        const comparison = compareFiles(
+          leftRow.file,
+          rightRow.file,
+          sortConfig.field
+        );
+
+        return sortConfig.direction === "asc" ? comparison : -comparison;
+      })
+    : filteredRows;
+
   const showSelectionCheckbox = !!onSelectionChange && !showDownload;
 
-  const headers = ["File", "Artist", "Title", "Album", "Year", "Type", "Size"];
-  if (onRemove) headers.push("");
+  const totalColumnCount =
+    sortableColumns.length +
+    (onRemove ? 1 : 0) +
+    (showSelectionCheckbox ? 1 : 0) +
+    (showDownload ? 1 : 0);
 
   const handleCheckboxChange = (fileId: number, checked: boolean) => {
     if (!onSelectionChange) return;
@@ -79,6 +164,19 @@ export default function CollectionTable({
     } else {
       onSelectionChange(new Set());
     }
+  };
+
+  const handleSort = (field: SortField) => {
+    setSortConfig((currentSort) => {
+      if (!currentSort || currentSort.field !== field) {
+        return { field, direction: "asc" };
+      }
+
+      return {
+        field,
+        direction: currentSort.direction === "asc" ? "desc" : "asc",
+      };
+    });
   };
 
   const splitFilenameAndExtension = (filename: string) => {
@@ -123,14 +221,60 @@ export default function CollectionTable({
               />
             </th>
           )}
-          {headers.map((header, headerIndex) => (
-            <th
-              key={headerIndex}
-              className={header === 'Year' ? styles.yearHeader : undefined}
-            >
-              {header}
-            </th>
-          ))}
+          {sortableColumns.map((column) => {
+            const isSorted = sortConfig?.field === column.field;
+            const sortHeaderClassName = [
+              column.headerClassName,
+              enableSorting ? styles.sortableHeader : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            return (
+              <th
+                key={column.field}
+                className={sortHeaderClassName}
+                aria-sort={
+                  enableSorting
+                    ? isSorted
+                      ? sortConfig.direction === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                    : undefined
+                }
+              >
+                {enableSorting ? (
+                  <button
+                    type="button"
+                    className={styles.sortButton}
+                    onClick={() => handleSort(column.field)}
+                  >
+                    <span>{column.label}</span>
+                    <span className={styles.sortIcon} aria-hidden="true">
+                      <span
+                        className={`${styles.sortArrow} ${styles.sortArrowUp} ${
+                          isSorted && sortConfig.direction === "asc"
+                            ? styles.sortArrowActive
+                            : ""
+                        }`}
+                      />
+                      <span
+                        className={`${styles.sortArrow} ${styles.sortArrowDown} ${
+                          isSorted && sortConfig.direction === "desc"
+                            ? styles.sortArrowActive
+                            : ""
+                        }`}
+                      />
+                    </span>
+                  </button>
+                ) : (
+                  column.label
+                )}
+              </th>
+            );
+          })}
+          {onRemove && <th />}
           {showDownload && (
             <th className={styles.selectAllHeader}>
               <input
@@ -147,11 +291,7 @@ export default function CollectionTable({
         {visibleRows.length === 0 ? (
           <tr>
             <td
-              colSpan={
-                headers.length +
-                (showSelectionCheckbox ? 1 : 0) +
-                (showDownload ? 1 : 0)
-              }
+              colSpan={totalColumnCount}
             >
               No matching files.
             </td>
@@ -177,11 +317,7 @@ export default function CollectionTable({
       </tbody>
       <tfoot>
         <tr className={styles.tableFooterRow}>
-          <td colSpan={
-            headers.length +
-            (showSelectionCheckbox ? 1 : 0) +
-            (showDownload ? 1 : 0)
-          }>
+          <td colSpan={totalColumnCount}>
             {/* spacer footer row for visual balance */}
           </td>
         </tr>
