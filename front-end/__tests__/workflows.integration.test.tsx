@@ -49,6 +49,7 @@ vi.mock("../app/hooks/useMounted", () => ({
 
 import HomePage from "../app/page";
 import CollectionTable from "../app/components/CollectionTable";
+import CollectionView from "../app/components/CollectionView";
 
 describe("main workflows", () => {
   beforeEach(() => {
@@ -197,6 +198,86 @@ describe("main workflows", () => {
       file_id: 1,
       filename: "track.mp3",
       title: "New Title",
+    });
+  });
+
+  it("filters the collection table by search text", () => {
+    // Act
+    render(
+      <CollectionView
+        collection={[
+          {
+            id: 1,
+            filename: "track-one.mp3",
+            title: "First Song",
+            artist: "Alpha Artist",
+            album: "Album One",
+            year: "2024",
+            type: "MP3",
+            size: "5 MB",
+          },
+          {
+            id: 2,
+            filename: "track-two.mp3",
+            title: "Second Song",
+            artist: "Beta Artist",
+            album: "Album Two",
+            year: "2023",
+            type: "MP3",
+            size: "6 MB",
+          },
+        ]}
+        isLoadingCollection={false}
+        selectedForDownload={new Set()}
+        onSelectionChange={() => {}}
+        onDownload={() => {}}
+        isDownloading={false}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Search collection"), {
+      target: { value: "beta" },
+    });
+
+    // Assert
+    expect(screen.queryByDisplayValue("First Song")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Second Song")).toBeInTheDocument();
+  });
+
+  it("keeps edited metadata visible when filtering after an inline change", async () => {
+    // Act
+    render(
+      <CollectionView
+        collection={[
+          {
+            id: 1,
+            filename: "track-one.mp3",
+            title: "Old Title",
+            artist: "Alpha Artist",
+            album: "Album One",
+            year: "2024",
+            type: "MP3",
+            size: "5 MB",
+          },
+        ]}
+        isLoadingCollection={false}
+        selectedForDownload={new Set()}
+        onSelectionChange={() => {}}
+        onDownload={() => {}}
+        isDownloading={false}
+      />
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Old Title"), {
+      target: { value: "Updated Title" },
+    });
+    fireEvent.change(screen.getByLabelText("Search collection"), {
+      target: { value: "updated" },
+    });
+
+    // Assert
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Updated Title")).toBeInTheDocument();
     });
   });
 });

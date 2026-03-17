@@ -14,6 +14,7 @@ interface CollectionTableProps {
   onSelectionChange?: (fileIds: Set<number>) => void;
   readOnly?: boolean;
   duplicateFilenames?: Set<string>;
+  filterTerm?: string;
 }
 
 export default function CollectionTable({
@@ -24,6 +25,7 @@ export default function CollectionTable({
   onSelectionChange,
   readOnly = false,
   duplicateFilenames,
+  filterTerm = "",
 }: CollectionTableProps) {
   const [files, setFiles] = useState<AudioFile[]>(collection);
 
@@ -32,6 +34,27 @@ export default function CollectionTable({
   }, [collection]);
 
   if (files.length === 0) return null;
+
+  const normalizedFilter = filterTerm.trim().toLowerCase();
+
+  const visibleRows = files
+    .map((file, index) => ({ file, index }))
+    .filter(({ file }) => {
+      if (!normalizedFilter) return true;
+
+      const searchableValues = [
+        file.filename,
+        file.title,
+        file.artist,
+        file.album,
+        file.year,
+        file.type,
+      ];
+
+      return searchableValues.some((value) =>
+        value.toLowerCase().includes(normalizedFilter)
+      );
+    });
 
   const showSelectionCheckbox = !!onSelectionChange && !showDownload;
 
@@ -52,7 +75,7 @@ export default function CollectionTable({
   const handleSelectAll = (checked: boolean) => {
     if (!onSelectionChange) return;
     if (checked) {
-      onSelectionChange(new Set(files.map((file) => file.id)));
+      onSelectionChange(new Set(visibleRows.map(({ file }) => file.id)));
     } else {
       onSelectionChange(new Set());
     }
@@ -121,22 +144,36 @@ export default function CollectionTable({
         </tr>
       </thead>
       <tbody>
-        {files.map((file, index) => (
-          <FileRow
-            key={file.id || `${file.filename}-${index}`}
-            file={file}
-            index={index}
-            selectedFiles={selectedFiles}
-            onSelectionChange={handleCheckboxChange}
-            onFilenameChange={handleFilenameChange}
-            onFieldChange={handleChange}
-            onDownload={showDownload}
-            onRemove={onRemove ? handleRemoveFile : undefined}
-            readOnly={readOnly}
-            showSelectionCheckbox={showSelectionCheckbox}
-            isDuplicate={duplicateFilenames?.has(file.filename)}
-          />
-        ))}
+        {visibleRows.length === 0 ? (
+          <tr>
+            <td
+              colSpan={
+                headers.length +
+                (showSelectionCheckbox ? 1 : 0) +
+                (showDownload ? 1 : 0)
+              }
+            >
+              No matching files.
+            </td>
+          </tr>
+        ) : (
+          visibleRows.map(({ file, index }) => (
+            <FileRow
+              key={file.id || `${file.filename}-${index}`}
+              file={file}
+              index={index}
+              selectedFiles={selectedFiles}
+              onSelectionChange={handleCheckboxChange}
+              onFilenameChange={handleFilenameChange}
+              onFieldChange={handleChange}
+              onDownload={showDownload}
+              onRemove={onRemove ? handleRemoveFile : undefined}
+              readOnly={readOnly}
+              showSelectionCheckbox={showSelectionCheckbox}
+              isDuplicate={duplicateFilenames?.has(file.filename)}
+            />
+          ))
+        )}
       </tbody>
       <tfoot>
         <tr className={styles.tableFooterRow}>
