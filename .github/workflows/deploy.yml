@@ -52,5 +52,4 @@ jobs:
             echo "✅ Entered deploy directory"
 
             git pull origin main || { echo "❌ git pull failed"; exit 1; }
-            docker compose pull || { echo "❌ docker compose pull failed"; exit 1; }
             docker compose up --build -d || { echo "❌ docker compose up failed"; exit 1; }
