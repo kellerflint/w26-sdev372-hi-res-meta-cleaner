@@ -121,7 +121,7 @@ jobs:
         run: npm ci
 
       - name: Run front-end integration tests
-        run: npm test -- __tests__/auth-pages.integration.test.tsx __tests__/workflows.integration.test.tsx
+        run: npm test -- __tests__/auth-pages.integration.test.tsx __tests__/home-page.integration.test.tsx
 
   front-end-e2e:
     name: E2E Tests
