@@ -121,26 +121,24 @@ describe("main workflows", () => {
     fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 
     // Assert
-    expect(
-      await screen.findByRole("heading", { name: "Audio Collection Editor" })
-    ).toBeVisible();
-    expect(fetch).toHaveBeenNthCalledWith(
-      1,
-      "http://localhost:3001/api/upload",
-      expect.objectContaining({
-        method: "POST",
-        credentials: "include",
-      })
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "http://localhost:3001/api/upload",
+        expect.objectContaining({
+          method: "POST",
+          credentials: "include",
+        })
+      )
     );
     await waitFor(() =>
-      expect(fetch).toHaveBeenNthCalledWith(
-        2,
+      expect(fetch).toHaveBeenCalledWith(
         "http://localhost:3001/api/metadata",
         expect.objectContaining({
           credentials: "include",
         })
       )
     );
+    expect(await screen.findByDisplayValue("Track One")).toBeInTheDocument();
   });
 
   it("shows the duplicate upload error", async () => {

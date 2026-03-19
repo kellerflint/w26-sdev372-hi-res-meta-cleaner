@@ -23,42 +23,36 @@ export default function CollectionView({
   isDownloading,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
-  const collectionHeading = (
-    <h2 className="section-heading">Audio Collection Editor</h2>
-  );
+  const hasCollection = !isLoadingCollection && collection.length > 0;
 
   return (
     <div>
+      <div className={styles.collectionHeader}>
+        <h2 className="section-heading">Audio Collection Editor</h2>
+        {hasCollection ? (
+          <div className={styles.collectionControls}>
+            <label
+              htmlFor="collection-search"
+              className={styles.searchLabel}>
+              Search collection
+            </label>
+            <input
+              id="collection-search"
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search file, title, artist, album, year"
+              className={styles.searchInput}
+            />
+          </div>
+        ) : null}
+      </div>
       {isLoadingCollection ? (
-        <>
-          {collectionHeading}
-          <Loading message="Loading collection" />
-        </>
+        <Loading message="Loading collection" />
       ) : collection.length === 0 ? (
-        <>
-          {collectionHeading}
-          <p>No files in your collection.</p>
-        </>
+        <p>No files in your collection.</p>
       ) : (
         <>
-          <div className={styles.collectionHeader}>
-            {collectionHeading}
-            <div className={styles.collectionControls}>
-              <label
-                htmlFor="collection-search"
-                className={styles.searchLabel}>
-                Search collection
-              </label>
-              <input
-                id="collection-search"
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search file, title, artist, album, year"
-                className={styles.searchInput}
-              />
-            </div>
-          </div>
           <CollectionTable
             collection={collection}
             showDownload
