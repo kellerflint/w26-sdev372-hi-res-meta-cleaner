@@ -132,12 +132,14 @@ describe("main workflows", () => {
         credentials: "include",
       })
     );
-    expect(fetch).toHaveBeenNthCalledWith(
-      2,
-      "http://localhost:3001/api/metadata",
-      expect.objectContaining({
-        credentials: "include",
-      })
+    await waitFor(() =>
+      expect(fetch).toHaveBeenNthCalledWith(
+        2,
+        "http://localhost:3001/api/metadata",
+        expect.objectContaining({
+          credentials: "include",
+        })
+      )
     );
   });
 

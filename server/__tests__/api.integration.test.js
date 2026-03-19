@@ -1,32 +1,17 @@
 import cookieParser from "cookie-parser";
 import express from "express";
 import request from "supertest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { hashPassword } from "../src/utils/hashPassword.js";
+import sequelize from "../src/db/sequelize.js";
+import { audioFile, metadata, user } from "../src/models/index.js";
 
-vi.mock("../src/models/User.js", () => ({
-  user: { create: vi.fn(), findOne: vi.fn() },
-}));
-vi.mock("../src/models/AudioFile.js", () => ({
-  audioFile: {
-    findOne: vi.fn(),
-    create: vi.fn(),
-    findAll: vi.fn(),
-    update: vi.fn(),
-  },
-}));
-vi.mock("../src/models/Metadata.js", () => ({
-  metadata: { upsert: vi.fn() },
-}));
 vi.mock("music-metadata", () => ({ parseFile: vi.fn() }));
 vi.mock("../src/services/downloadService.js", () => ({
   prepareFilesForDownload: vi.fn(),
   streamFilesAsZip: vi.fn(),
 }));
 
-import { user } from "../src/models/User.js";
-import { audioFile } from "../src/models/AudioFile.js";
-import { metadata } from "../src/models/Metadata.js";
 import { parseFile } from "music-metadata";
 import {
   prepareFilesForDownload,
@@ -52,20 +37,25 @@ function authCookie(userId = 1) {
   return `accessToken=${generateAccessToken(userId)}`;
 }
 
+beforeAll(async () => {
+  await sequelize.sync({ force: true });
+});
+
+afterAll(async () => {
+  await sequelize.close();
+});
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  await sequelize.query("SET FOREIGN_KEY_CHECKS = 0");
+  await sequelize.query("TRUNCATE TABLE metadata");
+  await sequelize.query("TRUNCATE TABLE audio_files");
+  await sequelize.query("TRUNCATE TABLE users");
+  await sequelize.query("SET FOREIGN_KEY_CHECKS = 1");
+});
+
 describe("API routes", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("creates a user", async () => {
-    // Arrange
-    user.create.mockResolvedValue({
-      user_id: 1,
-      email: "jane@example.com",
-      first_name: "Jane",
-      last_name: "Doe",
-    });
-
     // Act
     const response = await request(app).post("/api/user").send({
       firstName: "Jane",
@@ -87,16 +77,16 @@ describe("API routes", () => {
   it("logs in and sets auth cookies", async () => {
     // Arrange
     const password_hash = await hashPassword("secret123");
-    const existingUser = {
-      user_id: 1,
+    await user.create({
       email: "jane@example.com",
       password_hash,
-    };
-    user.findOne.mockResolvedValue(existingUser);
+      first_name: "Jane",
+      last_name: "Doe",
+    });
 
     // Act
     const response = await request(app).post("/api/login").send({
-      email: existingUser.email,
+      email: "jane@example.com",
       password: "secret123",
     });
 
@@ -109,8 +99,8 @@ describe("API routes", () => {
       ])
     );
     expect(response.body).toMatchObject({
-      user_id: existingUser.user_id,
-      email: existingUser.email,
+      user_id: 1,
+      email: "jane@example.com",
     });
   });
 
@@ -144,12 +134,11 @@ describe("API routes", () => {
 
   it("uploads a file and stores extracted metadata", async () => {
     // Arrange
-    audioFile.findOne.mockResolvedValue(null);
-    audioFile.create.mockResolvedValue({
-      file_id: 1,
-      user_id: 1,
-      filename: "files-1234567890-123.mp3",
-      original_filename: "track.mp3",
+    await user.create({
+      email: "test@example.com",
+      password_hash: "hash",
+      first_name: "Test",
+      last_name: "User",
     });
     parseFile.mockResolvedValue({
       common: {
@@ -162,22 +151,6 @@ describe("API routes", () => {
         container: "MPEG",
       },
     });
-    metadata.upsert.mockResolvedValue([
-      { file_id: 1, title: "Track One" },
-      true,
-    ]);
-    audioFile.findAll.mockResolvedValue([
-      {
-        file_id: 1,
-        original_filename: "track.mp3",
-        metadatum: {
-          title: "Track One",
-          artist: "Test Artist",
-          album: "Test Album",
-          year: 2024,
-        },
-      },
-    ]);
 
     // Act
     const response = await request(app)
@@ -189,7 +162,6 @@ describe("API routes", () => {
     expect(response.status).toBe(201);
     expect(response.body).toHaveLength(1);
     expect(response.body[0]).toMatchObject({
-      file_id: 1,
       original_filename: "track.mp3",
       metadata: {
         title: "Track One",
@@ -202,7 +174,17 @@ describe("API routes", () => {
 
   it("returns 409 for a duplicate upload", async () => {
     // Arrange
-    audioFile.findOne.mockResolvedValue({ file_id: 1 });
+    await user.create({
+      email: "test@example.com",
+      password_hash: "hash",
+      first_name: "Test",
+      last_name: "User",
+    });
+    await audioFile.create({
+      user_id: 1,
+      filename: "existing.mp3",
+      original_filename: "track.mp3",
+    });
 
     // Act
     const response = await request(app)
@@ -219,18 +201,23 @@ describe("API routes", () => {
 
   it("returns the saved collection for the signed-in user", async () => {
     // Arrange
-    audioFile.findAll.mockResolvedValue([
-      {
-        file_id: 1,
-        original_filename: "track.mp3",
-        metadatum: { title: "Track One", artist: "Test Artist" },
-      },
-    ]);
+    await user.create({
+      email: "test@example.com",
+      password_hash: "hash",
+      first_name: "Test",
+      last_name: "User",
+    });
+    const af = await audioFile.create({
+      user_id: 1,
+      filename: "track.mp3",
+      original_filename: "track.mp3",
+    });
+    await metadata.create({ file_id: af.file_id, title: "Track One", artist: "Test Artist" });
 
     // Act
     const response = await request(app)
       .get("/api/metadata")
-      .set("Cookie", authCookie(7));
+      .set("Cookie", authCookie(1));
 
     // Assert
     expect(response.status).toBe(200);
@@ -240,20 +227,24 @@ describe("API routes", () => {
 
   it("updates a filename and metadata fields", async () => {
     // Arrange
-    audioFile.findOne.mockResolvedValue({
-      file_id: 1,
+    await user.create({
+      email: "test@example.com",
+      password_hash: "hash",
+      first_name: "Test",
+      last_name: "User",
+    });
+    const af = await audioFile.create({
       user_id: 1,
+      filename: "files-1234567890-123.mp3",
       original_filename: "track.mp3",
     });
-    audioFile.update.mockResolvedValue([1]);
-    metadata.upsert.mockResolvedValue([{}, true]);
 
     // Act
     const response = await request(app)
       .post("/api/update")
       .set("Cookie", authCookie())
       .send({
-        file_id: 1,
+        file_id: af.file_id,
         filename: "cleaned-track.mp3",
         title: "Cleaned Title",
         artist: "Cleaned Artist",
