@@ -1,7 +1,9 @@
-import { AudioFile } from '../types/audio';
-import CollectionTable from './CollectionTable';
-import Loading from './Loading';
-import styles from '../page.module.css';
+import { useState } from "react";
+import { AudioFile } from "../types/audio";
+import CollectionTable from "./CollectionTable";
+import pageStyles from "../page.module.css";
+import styles from "./CollectionView.module.css";
+import Loading from "./Loading";
 
 type Props = {
   collection: AudioFile[];
@@ -20,9 +22,31 @@ export default function CollectionView({
   onDownload,
   isDownloading,
 }: Props) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const hasCollection = !isLoadingCollection && collection.length > 0;
+
   return (
     <div>
-      <h2 className="section-heading">Audio Collection Editor</h2>
+      <div className={styles.collectionHeader}>
+        <h2 className="section-heading">Audio Collection Editor</h2>
+        {hasCollection ? (
+          <div className={styles.collectionControls}>
+            <label
+              htmlFor="collection-search"
+              className={styles.searchLabel}>
+              Search collection
+            </label>
+            <input
+              id="collection-search"
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search file, title, artist, album, year"
+              className={styles.searchInput}
+            />
+          </div>
+        ) : null}
+      </div>
       {isLoadingCollection ? (
         <Loading message="Loading collection" />
       ) : collection.length === 0 ? (
@@ -34,14 +58,17 @@ export default function CollectionView({
             showDownload
             selectedFiles={selectedForDownload}
             onSelectionChange={onSelectionChange}
+            filterTerm={searchTerm}
+            enableSorting
           />
           <button
             type="button"
-            className={`submit-button ${styles.downloadButton}`}
+            className={`submit-button ${pageStyles.downloadButton}`}
             onClick={onDownload}
-            disabled={selectedForDownload.size === 0 || isDownloading}
-          >
-            {isDownloading ? 'Downloading...' : `Download Selected (${selectedForDownload.size})`}
+            disabled={selectedForDownload.size === 0 || isDownloading}>
+            {isDownloading
+              ? "Downloading..."
+              : `Download Selected (${selectedForDownload.size})`}
           </button>
         </>
       )}
